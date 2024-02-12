@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
+using Nautilus.Handlers;
 using uSky;
 
 namespace ValdyrSubnauticaMods
@@ -16,10 +17,11 @@ namespace ValdyrSubnauticaMods
     {
         private const string Guid = "Valdyr.TimeSpeedMod";
         private const string PluginName = "Time Speed Mod";
-        private const string VersionString = "0.0.1";
+        private const string VersionString = "0.0.2";
 
         private static readonly Harmony Harmony = new Harmony(Guid);
         public static ManualLogSource Log;
+        internal static Config ModConfig { get; } = OptionsPanelHandler.RegisterModOptions<Config>();
 
         private void Awake()
         {

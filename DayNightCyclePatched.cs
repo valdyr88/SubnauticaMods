@@ -11,6 +11,29 @@ namespace ValdyrSubnauticaMods
     [HarmonyPatch(typeof(DayNightCycle))]
     internal class DayNightCyclePatched
     {
+        //private static T Lerp<T>(T a, T b, T t) => ((T)1.0 - t)*a + t*b;
+        private static float Lerp(float a, float b, float t) => (1.0f - t)*a + t*b;
+
+        private static float GetTimeSpeed(DayNightCycle __instance)
+        {
+            float easeInOut = HarmonyPatchUnityPlugin.ModConfig.EaseInOutLerp;
+            float daySpeed = HarmonyPatchUnityPlugin.ModConfig.DayTimeSpeed;
+            float nightSpeed = HarmonyPatchUnityPlugin.ModConfig.NightTimeSpeed;
+
+            if (easeInOut <= 0.0f)
+                return (__instance.IsDay())? daySpeed : nightSpeed;
+
+            float timeOfDay = __instance.GetDayScalar();
+
+            float midDay = (__instance.sunRiseTime + __instance.sunSetTime) / 2.0f;
+            float t = Math.Abs(midDay - timeOfDay) - __instance.sunRiseTime;
+            t = (t < 0.0f)? (t / __instance.sunRiseTime) : (t / (1.0f - __instance.sunRiseTime));
+            t = Math.Sign(t) * (float)Math.Pow((double)Math.Abs(t), (double)easeInOut);
+            t = 0.5f * t + t;
+
+            return Lerp(nightSpeed, daySpeed, t);
+        }
+
         [HarmonyPatch(nameof(DayNightCycle.Update))]
         [HarmonyPrefix]
         public static void Update_Prefix(DayNightCycle __instance)
@@ -34,7 +57,7 @@ namespace ValdyrSubnauticaMods
                 return;
             }
 
-            float timeSpeedMod = (__instance.IsDay())? DayNightCyclePatched.daySpeedMod : DayNightCyclePatched.nightSpeedMod;
+            float timeSpeedMod = DayNightCyclePatched.GetTimeSpeed(__instance);
             DayNightCyclePatched.timePassedMod += (double)Time.deltaTime * timeSpeedMod;
         }
 
@@ -86,7 +109,5 @@ namespace ValdyrSubnauticaMods
 
         private static bool isInSkipTimeMode = false;
         private static double timePassedMod = 0.0f;
-        public static float daySpeedMod = 0.1f;
-        public static float nightSpeedMod = 1.0f;
     }
 }

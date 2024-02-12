@@ -67,6 +67,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Config.cs" />
     <Compile Include="HarmonyPatch.cs" />
     <Compile Include="DayNightCyclePatched.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
