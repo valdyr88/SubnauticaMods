@@ -13,6 +13,7 @@ namespace ValdyrSubnauticaMods
     {
         //private static T Lerp<T>(T a, T b, T t) => ((T)1.0 - t)*a + t*b;
         private static float Lerp(float a, float b, float t) => (1.0f - t)*a + t*b;
+        private static float Clamp01(float a) => Math.Min(Math.Max(a, 0.0f), 1.0f);
 
         private static float GetTimeSpeed(DayNightCycle __instance)
         {
@@ -25,13 +26,14 @@ namespace ValdyrSubnauticaMods
 
             float timeOfDay = __instance.GetDayScalar();
 
+            //https://www.desmos.com/calculator/lubwgmbtax
             float midDay = (__instance.sunRiseTime + __instance.sunSetTime) / 2.0f;
-            float t = Math.Abs(midDay - timeOfDay) - __instance.sunRiseTime;
-            t = (t < 0.0f)? (t / __instance.sunRiseTime) : (t / (1.0f - __instance.sunRiseTime));
+            float t = (1.0f - Math.Abs(midDay - timeOfDay) / midDay) - __instance.sunRiseTime;
+            t = (t < 0.0f)? (t / __instance.sunRiseTime) : (t / (__instance.sunSetTime));
             t = Math.Sign(t) * (float)Math.Pow((double)Math.Abs(t), (double)easeInOut);
-            t = 0.5f * t + t;
+            t = 0.5f*t + 0.5f;
 
-            return Lerp(nightSpeed, daySpeed, t);
+            return Lerp(nightSpeed, daySpeed, Clamp01(t));
         }
 
         [HarmonyPatch(nameof(DayNightCycle.Update))]

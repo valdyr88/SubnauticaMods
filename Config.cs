@@ -22,7 +22,7 @@ namespace ValdyrSubnauticaMods
         [Slider("Night time speed", 0.0f, 10.0f, DefaultValue = 1.0f, Format = "{0:F2}", Step = 0.01f)]
         public float NightTimeSpeed = 1.0f;
 
-        [Slider("Eease in/out", 0.0f, 2.0f, DefaultValue = 1.0f, Format = "{0:F2}", Step = 0.01f)]
-        public float EaseInOutLerp = 1.0f;
+        [Slider("Eease in/out", 0.0f, 1.0f, DefaultValue = 0.5f, Format = "{0:F2}", Step = 0.01f)]
+        public float EaseInOutLerp = 0.5f;
     }
 }
