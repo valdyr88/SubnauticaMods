@@ -40,6 +40,9 @@ namespace ValdyrSubnauticaMods
         [HarmonyPrefix]
         public static void Update_Prefix(DayNightCycle __instance)
         {
+            if (DayNightCyclePatched.isTimePacked)
+                DayNightCyclePatched.UnpackTime(__instance);
+
             isInSkipTimeMode = __instance.IsInSkipTimeMode();
         }
 
@@ -95,13 +98,11 @@ namespace ValdyrSubnauticaMods
             return false;
         }
 
-        [HarmonyPatch(nameof(DayNightCycle.OnProtoSerialize))]
-        [HarmonyPrefix]
-        public static void OnProtoSerialize_Prefix(DayNightCycle __instance)
+        private static void PackTime(DayNightCycle __instance)
         {
             //__instance.timePassedAsDouble = DayNightCyclePatched.timePassedMod;
             UInt32 timePassedGame = Convert.ToUInt32(__instance.timePassedAsDouble);
-            UInt32 timePassedMod  = Convert.ToUInt32(DayNightCyclePatched.timePassedMod);
+            UInt32 timePassedMod = Convert.ToUInt32(DayNightCyclePatched.timePassedMod);
 
             const UInt64 packedTimesFlag = 0x8000000000000000;
             UInt64 packedU64 = (((UInt64)timePassedGame) << 32) | ((UInt64)timePassedMod);
@@ -110,15 +111,15 @@ namespace ValdyrSubnauticaMods
             Int64 packedI64 = BitConverter.ToInt64(BitConverter.GetBytes(packedU64), 0);
             __instance.timePassedAsDouble = BitConverter.Int64BitsToDouble(packedI64);
 
-            HarmonyPatchUnityPlugin.Log.LogInfo(": Saving, time game: " + timePassedGame);
-            HarmonyPatchUnityPlugin.Log.LogInfo(":         time mod: " + timePassedMod);
-            HarmonyPatchUnityPlugin.Log.LogInfo(":         packed:   0x" + packedI64.ToString("X"));
-            HarmonyPatchUnityPlugin.Log.LogInfo(":         packedUI: 0x" + packedU64.ToString("X"));
+            HarmonyPatchUnityPlugin.Log.LogInfo(": Packing time, time game: " + timePassedGame);
+            HarmonyPatchUnityPlugin.Log.LogInfo(":               time mod: " + timePassedMod);
+            HarmonyPatchUnityPlugin.Log.LogInfo(":               packed:   0x" + packedI64.ToString("X"));
+            HarmonyPatchUnityPlugin.Log.LogInfo(":               packedUI: 0x" + packedU64.ToString("X"));
+
+            DayNightCyclePatched.isTimePacked = true;
         }
 
-        [HarmonyPatch(nameof(DayNightCycle.OnProtoDeserialize))]
-        [HarmonyPrefix]
-        public static void OnProtoDeserialize_Prefix(DayNightCycle __instance)
+        private static void UnpackTime(DayNightCycle __instance)
         {
             const UInt64 packedTimesFlag = 0x8000000000000000;
 
@@ -128,15 +129,15 @@ namespace ValdyrSubnauticaMods
             if ((packedU64 & packedTimesFlag) != 0)
             {
                 UInt32 timePassedGame = (UInt32)((packedU64 & 0x7fffffff00000000) >> 32);
-                UInt32 timePassedMod =  (UInt32)((packedU64 & 0x00000000ffffffff));
+                UInt32 timePassedMod = (UInt32)((packedU64 & 0x00000000ffffffff));
 
                 __instance.timePassedAsDouble = (double)timePassedGame;
                 DayNightCyclePatched.timePassedMod = (double)timePassedMod;
 
-                HarmonyPatchUnityPlugin.Log.LogInfo(":Load new save, packed:   0x" + packedI64.ToString("X"));
-                HarmonyPatchUnityPlugin.Log.LogInfo(":               packedUI: 0x" + packedU64.ToString("X"));
-                HarmonyPatchUnityPlugin.Log.LogInfo(":               time game: " + __instance.timePassedAsDouble);
-                HarmonyPatchUnityPlugin.Log.LogInfo(":               time mod: " + DayNightCyclePatched.timePassedMod);
+                HarmonyPatchUnityPlugin.Log.LogInfo(": Unpacking time, packed:   0x" + packedI64.ToString("X"));
+                HarmonyPatchUnityPlugin.Log.LogInfo(":                 packedUI: 0x" + packedU64.ToString("X"));
+                HarmonyPatchUnityPlugin.Log.LogInfo(":                 time game: " + __instance.timePassedAsDouble);
+                HarmonyPatchUnityPlugin.Log.LogInfo(":                 time mod: " + DayNightCyclePatched.timePassedMod);
             }
             else //old save, with direct overwrite
             {
@@ -144,8 +145,25 @@ namespace ValdyrSubnauticaMods
 
                 HarmonyPatchUnityPlugin.Log.LogInfo(": Load old save, time: " + __instance.timePassedAsDouble);
             }
+
+            DayNightCyclePatched.isTimePacked = false;
         }
 
+        [HarmonyPatch(nameof(DayNightCycle.OnProtoSerialize))]
+        [HarmonyPrefix]
+        public static void OnProtoSerialize_Prefix(DayNightCycle __instance)
+        {
+            DayNightCyclePatched.PackTime(__instance);
+        }
+
+        [HarmonyPatch(nameof(DayNightCycle.OnProtoDeserialize))]
+        [HarmonyPrefix]
+        public static void OnProtoDeserialize_Prefix(DayNightCycle __instance)
+        {
+            DayNightCyclePatched.UnpackTime(__instance);
+        }
+
+        private static bool isTimePacked = false;
         private static bool isInSkipTimeMode = false;
         private static double timePassedMod = 0.0f;
     }
