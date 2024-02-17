@@ -99,14 +99,51 @@ namespace ValdyrSubnauticaMods
         [HarmonyPrefix]
         public static void OnProtoSerialize_Prefix(DayNightCycle __instance)
         {
-            __instance.timePassedAsDouble = DayNightCyclePatched.timePassedMod;
+            //__instance.timePassedAsDouble = DayNightCyclePatched.timePassedMod;
+            UInt32 timePassedGame = Convert.ToUInt32(__instance.timePassedAsDouble);
+            UInt32 timePassedMod  = Convert.ToUInt32(DayNightCyclePatched.timePassedMod);
+
+            const UInt64 packedTimesFlag = 0x8000000000000000;
+            UInt64 packedU64 = (((UInt64)timePassedGame) << 32) | ((UInt64)timePassedMod);
+            packedU64 = packedTimesFlag | packedU64; //hopefully 2147483647 vanilla game seconds haven't passed (68 years in game)
+
+            Int64 packedI64 = BitConverter.ToInt64(BitConverter.GetBytes(packedU64), 0);
+            __instance.timePassedAsDouble = BitConverter.Int64BitsToDouble(packedI64);
+
+            HarmonyPatchUnityPlugin.Log.LogInfo(": Saving, time game: " + timePassedGame);
+            HarmonyPatchUnityPlugin.Log.LogInfo(":         time mod: " + timePassedMod);
+            HarmonyPatchUnityPlugin.Log.LogInfo(":         packed:   0x" + packedI64.ToString("X"));
+            HarmonyPatchUnityPlugin.Log.LogInfo(":         packedUI: 0x" + packedU64.ToString("X"));
         }
 
         [HarmonyPatch(nameof(DayNightCycle.OnProtoDeserialize))]
-        [HarmonyPostfix]
-        public static void OnProtoDeserialize_Postfix(DayNightCycle __instance)
+        [HarmonyPrefix]
+        public static void OnProtoDeserialize_Prefix(DayNightCycle __instance)
         {
-            DayNightCyclePatched.timePassedMod = __instance.timePassedAsDouble;
+            const UInt64 packedTimesFlag = 0x8000000000000000;
+
+            Int64 packedI64 = BitConverter.DoubleToInt64Bits(__instance.timePassedAsDouble);
+            UInt64 packedU64 = BitConverter.ToUInt64(BitConverter.GetBytes(packedI64), 0);
+
+            if ((packedU64 & packedTimesFlag) != 0)
+            {
+                UInt32 timePassedGame = (UInt32)((packedU64 & 0x7fffffff00000000) >> 32);
+                UInt32 timePassedMod =  (UInt32)((packedU64 & 0x00000000ffffffff));
+
+                __instance.timePassedAsDouble = (double)timePassedGame;
+                DayNightCyclePatched.timePassedMod = (double)timePassedMod;
+
+                HarmonyPatchUnityPlugin.Log.LogInfo(":Load new save, packed:   0x" + packedI64.ToString("X"));
+                HarmonyPatchUnityPlugin.Log.LogInfo(":               packedUI: 0x" + packedU64.ToString("X"));
+                HarmonyPatchUnityPlugin.Log.LogInfo(":               time game: " + __instance.timePassedAsDouble);
+                HarmonyPatchUnityPlugin.Log.LogInfo(":               time mod: " + DayNightCyclePatched.timePassedMod);
+            }
+            else //old save, with direct overwrite
+            {
+                DayNightCyclePatched.timePassedMod = __instance.timePassedAsDouble;
+
+                HarmonyPatchUnityPlugin.Log.LogInfo(": Load old save, time: " + __instance.timePassedAsDouble);
+            }
         }
 
         private static bool isInSkipTimeMode = false;
