@@ -17,7 +17,7 @@ namespace ValdyrSubnauticaMods
     {
         private const string Guid = "Valdyr.TimeSpeedMod";
         private const string PluginName = "Time Speed Mod";
-        private const string VersionString = "0.0.2";
+        private const string VersionString = "0.0.3";
 
         private static readonly Harmony Harmony = new Harmony(Guid);
         public static ManualLogSource Log;
